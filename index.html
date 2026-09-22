@@ -45,12 +45,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px s
 <div class="card" style="text-align:center">
 <button id="micButton" class="primary" style="font-size:18px">🎤 押している間だけ話す</button>
 <p id="micStatus" class="muted">ボタンを押し続けて英語で話し、話し終わったら指を離してください。</p><button id="micReset" class="soft" style="width:100%;margin-top:6px">↻ 言い直す・リセット</button>
-<div id="transcriptBox" class="hide"><p class="muted">認識した英語</p><div class="big" id="transcript"></div><div id="keywordResult" class="tip"></div></div>
+<div id="transcriptBox" class="hide"><p class="muted">認識した英語</p><div class="big" id="transcript"></div><div id="keywordResult" class="tip"></div><div id="grammarResult" class="tip hide"></div></div>
 <div id="fallbackBox" class="hide"><p class="muted">このブラウザでは音声認識を利用できない場合があります。</p><input id="fallbackInput" placeholder="英語を入力" style="width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;font-size:16px"><button id="fallbackCheck" class="soft" style="width:100%;margin-top:8px">入力した英文をチェック</button></div>
 </div>
 <div id="modelBox" class="card hide"><p class="muted">模範回答</p><div class="big" id="modelAnswer"></div><p id="modelJa"></p><button id="modelAudio" class="soft" style="width:100%">🔊 模範回答を聞く</button></div>
 <div class="row" id="convControls"><button id="convPrev">← 前へ</button><button id="showModel">模範回答</button><button id="convNext">次へ</button></div>
-<div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
+<div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><div id="convGrammar" class="tip"></div><button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
 </section>
 
 </main>
@@ -131,7 +131,7 @@ function drawConversation(){
  el("convTarget").innerHTML="🎯 今日使う表現：<b>"+x.targets.join(" / ")+"</b>";
  el("convProgress").style.width=((ci+1)/convSession.length*100)+"%";
  el("transcriptBox").classList.add("hide");el("modelBox").classList.add("hide");
- el("transcript").textContent="";el("keywordResult").innerHTML="";
+ el("transcript").textContent="";el("keywordResult").innerHTML="";el("grammarResult").innerHTML="";el("grammarResult").classList.add("hide");
  el("micStatus").textContent="ボタンを押し続けて英語で話し、話し終わったら指を離してください。";
  el("fallbackBox").classList.add("hide");
  if(!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) el("fallbackBox").classList.remove("hide");
@@ -147,11 +147,43 @@ function targetOK(t,key){
  if(key==="be interested in"||key==="interested in")return t.includes("interested in");
  return false;
 }
+function grammarCheck(text){
+ let raw=(text||"").trim(),t=normalizeSpeech(raw),issues=[];
+ if(!t)return {level:"△",msg:"英文を認識できませんでした。もう一度話してみましょう。"};
+ let words=t.split(" ");
+ // Basic subject + be-verb agreement
+ if(/\bi am\b/.test(t)===false && /\bi (is|are)\b/.test(t))issues.push("I の後の be動詞は am を使います。");
+ if(/\b(he|she|it) (am|are)\b/.test(t))issues.push("he / she / it の後の be動詞は is を使います。");
+ if(/\b(you|we|they) (am|is)\b/.test(t))issues.push("you / we / they の後の be動詞は are を使います。");
+ // Common present-tense agreement errors
+ if(/\bi (usually |always |sometimes )?[a-z]+s\b/.test(t) && !/\bi (is|was|has|does)\b/.test(t))
+   issues.push("I の後の一般動詞には通常 -s を付けません。");
+ if(/\b(he|she|it) (usually |always |sometimes )?(get|drink|like|need|look|arrive|decide)\b/.test(t))
+   issues.push("he / she / it の現在形では、一般動詞に -s / -es が必要です。");
+ // Infinitive after decide / need
+ if(/\b(decide|decided|need|needs|needed) [a-z]+ing\b/.test(t))
+   issues.push("decide / need の後は、この練習では「to + 動詞」の形を確認しましょう。");
+ // Interested in
+ if(/\binterested (at|on|for)\b/.test(t))
+   issues.push("「〜に興味がある」は interested in を使います。");
+ // enough common placement
+ if(/\benough (big|good|fast|old|warm|cold|strong)\b/.test(t))
+   issues.push("形容詞を修飾する enough は通常、形容詞の後に置きます（例: good enough）。");
+ // Basic article pattern for singular common nouns used in this course
+ if(/\b(i have|i need|looking for) (phone|book|pen|car)\b/.test(t))
+   issues.push("単数の数えられる名詞には a / the / my などが必要なことがあります。");
+ // Double subject / repeated words from speech recognition
+ if(/\b(i|you|he|she|we|they) \1\b/.test(t) || /\b(\w+) \1\b/.test(t))
+   issues.push("同じ語が続いています。言い直しや音声認識の重複がないか確認してください。");
+ if(issues.length)return {level:"△",msg:issues.join("<br>")};
+ return {level:"○",msg:"このアプリで確認できる基本文法では問題は見つかりませんでした。"};
+}
 function checkConversation(text){
  let x=convSession[ci],t=normalizeSpeech(text), oks=x.targets.map(k=>targetOK(t,k));
  el("transcript").textContent=text||"（認識できませんでした）";el("transcriptBox").classList.remove("hide");
- el("keywordResult").innerHTML=x.targets.map((k,i)=>(oks[i]?"✅ ":"⬜ ")+k).join("<br>")+"<br><small>※ 文法の完全採点ではなく、今日の表現を使えたかを確認します。</small>";
- convResults[ci]={targets:x.targets,oks:oks,text:text};
+ el("keywordResult").innerHTML=x.targets.map((k,i)=>(oks[i]?"✅ ":"⬜ ")+k).join("<br>")+"<br><small>今日の表現を使えたかを確認します。</small>";
+ let g=grammarCheck(text),gb=el("grammarResult");gb.classList.remove("hide");gb.innerHTML="<b>📝 簡易文法チェック："+g.level+"</b><br>"+g.msg+"<br><small>※ 無料のルール式チェックです。すべての文法・自然さを判定できるわけではありません。</small>";
+ convResults[ci]={targets:x.targets,oks:oks,text:text,grammar:g};
 }
 function finishConversation(){
  stopMic();let total=0,hit=0,good=[],weak=[];
@@ -160,6 +192,8 @@ function finishConversation(){
  el("convScore").textContent=(hit)+" / "+total+" 表現を使えました";
  el("convGood").innerHTML="<b>✅ 使えた表現</b><br>"+(uniq(good).join(" / ")||"—");
  el("convWeak").innerHTML="<b>△ 復習したい表現</b><br>"+(uniq(weak).join(" / ")||"なし。よくできました！");
+ let gIssues=convResults.filter(r=>r&&r.grammar&&r.grammar.level==="△");
+ el("convGrammar").innerHTML="<b>📝 文法チェック</b><br>"+(gIssues.length?gIssues.length+"問で確認ポイントがありました。各問題に戻って内容を確認できます。":"基本文法の確認ポイントはありませんでした。");
  el("convSummary").classList.remove("hide");el("convControls").classList.add("hide");el("modelBox").classList.add("hide");
  let prog=JSON.parse(localStorage.progress||"{}");uniq(weak).forEach(k=>{let key=k==="interested in"?"be interested in":k;if(prog[key])prog[key].next=Date.now()});localStorage.progress=JSON.stringify(prog);stats();
 }
@@ -205,9 +239,9 @@ mic.onpointerleave=e=>{if(e.buttons)stopMic()};
 el("fallbackCheck").onclick=()=>checkConversation(el("fallbackInput").value);
 el("showModel").onclick=()=>{let x=convSession[ci];el("modelAnswer").textContent=x.model;el("modelJa").textContent=x.ja;el("modelBox").classList.remove("hide")};
 el("modelAudio").onclick=()=>say(convSession[ci].model,.85);
-el("micReset").onclick=()=>{stopMic();convResults[ci]=null;el("transcriptBox").classList.add("hide");el("transcript").textContent="";el("keywordResult").innerHTML="";el("modelBox").classList.add("hide");el("micStatus").textContent="リセットしました。もう一度、押し続けて話してください。"};
+el("micReset").onclick=()=>{stopMic();convResults[ci]=null;el("transcriptBox").classList.add("hide");el("transcript").textContent="";el("keywordResult").innerHTML="";el("grammarResult").innerHTML="";el("grammarResult").classList.add("hide");el("modelBox").classList.add("hide");el("micStatus").textContent="リセットしました。もう一度、押し続けて話してください。"};
 el("convPrev").onclick=()=>{stopMic();if(ci>0){ci--;drawConversation()}};
-el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:""};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
+el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:"",grammar:{level:"—",msg:"未回答"}};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
 el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:conversation).slice(0,5);ci=0;convResults=[];drawConversation()};
 
 stats();drawListen();drawSpeak();drawConversation();if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
