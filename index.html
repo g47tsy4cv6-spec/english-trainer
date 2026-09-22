@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#172033"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json"><title>English Trainer</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}
+main{max-width:540px;margin:auto;padding:22px 16px 100px}h1{font-size:28px;margin:4px 0}.muted{color:#70798a}.card{background:#fff;padding:18px;border-radius:20px;margin:14px 0;box-shadow:0 5px 22px #1720330d}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{text-align:center;background:#fff;border-radius:16px;padding:12px 4px}.stat b{display:block;font-size:22px}.stat small{color:#70798a}
+button{border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;touch-action:manipulation}.primary{width:100%;background:#172033;color:#fff}.soft{background:#e9edf3}.row{display:flex;gap:8px}.row>*{flex:1}
+.word{text-align:center;font-size:34px;font-weight:800;margin:18px 0}.meaning{text-align:center;font-size:21px;font-weight:650}.example{background:#f2f4f7;border-radius:14px;padding:14px;margin-top:12px;line-height:1.55}.hide{display:none!important}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px solid #ddd;padding-bottom:env(safe-area-inset-bottom)}nav>div{max-width:540px;margin:auto;display:grid;grid-template-columns:repeat(4,1fr)}nav button{background:transparent;color:#70798a;padding:13px 2px;font-size:12px}
+.progress{height:8px;background:#e4e7ec;border-radius:9px;overflow:hidden}.progress span{display:block;height:100%;background:#172033}
+</style></head><body><main>
+<section id="home"><h1>English Trainer</h1><p class="muted">中学英語から「聞ける・話せる」へ</p>
+<div class="stats"><div class="stat"><b id="learned">0</b><small>学習回数</small></div><div class="stat"><b>8</b><small>今日の教材</small></div><div class="stat"><b id="score">—</b><small>覚えた率</small></div></div>
+<div class="card"><small class="muted">TODAY</small><h2>今日の15分</h2><p>単語5個＋熟語3個。音と例文まで練習します。</p><button class="primary" data-go="words">今日の学習を始める</button></div>
+<div class="card"><small class="muted">LISTENING</small><h2>文頭を聞き取る</h2><p>Do you / Did you / Would you / What are you / How do you を重点練習。</p><button class="primary" data-go="listen">リスニングを始める</button></div></section>
+
+<section id="words" class="hide"><h1>単語・熟語</h1><div class="progress"><span id="progress"></span></div>
+<div class="card"><small id="type" class="muted"></small><div id="word" class="word"></div><div class="row"><button id="wordAudio" class="soft">🔊 音声を聞く</button></div>
+<div id="wordAnswer" class="hide"><div id="meaning" class="meaning"></div><div id="example" class="example"></div><button id="exampleAudio" class="soft" style="width:100%;margin-top:10px">🔊 例文を聞く</button></div></div>
+<button id="reveal" class="primary">意味を見る</button><div id="rating" class="row hide" style="margin-top:9px"><button data-rate="0">わからない</button><button data-rate="1">微妙</button><button data-rate="2">覚えた</button></div></section>
+
+<section id="listen" class="hide"><h1>リスニング</h1><p class="muted">文字を見ずに聞いてください。</p><div class="card" style="text-align:center"><div style="font-size:50px">🎧</div><h2>何と言っている？</h2><button id="listenAudio" class="primary">音声を聞く</button><div id="listenAnswer" class="hide"><h2 id="listenEn"></h2><p id="listenJa"></p></div></div><div class="row"><button id="listenReveal">答えを見る</button><button id="listenNext">次へ</button></div></section>
+
+<section id="speak" class="hide"><h1>スピーキング</h1><p class="muted">日本語を見て、先に英語を声に出します。</p><div class="card" style="text-align:center"><small class="muted">SAY IT IN ENGLISH</small><h2 id="speakJa"></h2><div id="speakAnswer" class="hide"><h2 id="speakEn"></h2><button id="speakAudio" class="soft">🔊 正解を聞く</button></div></div><button id="speakReveal" class="primary">正解を見る</button><button id="speakNext" style="width:100%;margin-top:9px">次の問題</button></section>
+</main>
+<nav><div><button data-go="home">ホーム</button><button data-go="words">単語・熟語</button><button data-go="listen">聞く</button><button data-go="speak">話す</button></div></nav>
+<script>
+"use strict";
+const vocab=[
+["単語","usually","たいてい、普段は","I usually get up at seven.","私は普段7時に起きます。"],
+["単語","enough","十分な","Do you have enough time?","十分な時間がありますか？"],
+["単語","decide","決める","I decided to study English.","私は英語を勉強することに決めました。"],
+["単語","arrive","到着する","We arrived at the station.","私たちは駅に到着しました。"],
+["単語","important","重要な","This is important for me.","これは私にとって重要です。"],
+["熟語","get up","起きる","What time do you get up?","何時に起きますか？"],
+["熟語","look for","〜を探す","I'm looking for my phone.","私は携帯を探しています。"],
+["熟語","be interested in","〜に興味がある","I'm interested in English.","私は英語に興味があります。"]];
+const listening=[["Do you like coffee?","コーヒーは好きですか？"],["Did you eat breakfast?","朝食を食べましたか？"],["Would you like some coffee?","コーヒーはいかがですか？"],["What are you doing?","何をしていますか？"],["How do you like your coffee?","コーヒーはどのようにしますか？"]];
+const speaking=[["私は普段7時に起きます。","I usually get up at seven."],["コーヒーは好きですか？","Do you like coffee?"],["十分な時間がありますか？","Do you have enough time?"],["私は携帯を探しています。","I'm looking for my phone."]];
+let vi=0,li=0,si=0; const el=id=>document.getElementById(id);
+function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words")drawWord();if(id==="listen")drawListen();if(id==="speak")drawSpeak();scrollTo(0,0)}
+function say(t){if(!window.speechSynthesis){alert("Safariで開いてください。");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang="en-US";u.rate=.78;speechSynthesis.speak(u)}
+function drawWord(){let v=vocab[vi];el("type").textContent=v[0];el("word").textContent=v[1];el("meaning").textContent=v[2];el("example").innerHTML=v[3]+"<br><small>"+v[4]+"</small>";el("wordAnswer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/vocab.length*100)+"%"}
+function drawListen(){el("listenEn").textContent=listening[li][0];el("listenJa").textContent=listening[li][1];el("listenAnswer").classList.add("hide")}
+function drawSpeak(){el("speakJa").textContent=speaking[si][0];el("speakEn").textContent=speaking[si][1];el("speakAnswer").classList.add("hide")}
+function stats(){let n=+(localStorage.learned||0),g=+(localStorage.good||0);el("learned").textContent=n;el("score").textContent=n?Math.round(g/n*100)+"%":"—"}
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>show(b.dataset.go));
+el("reveal").onclick=()=>{el("wordAnswer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};
+el("wordAudio").onclick=()=>say(vocab[vi][1]);el("exampleAudio").onclick=()=>say(vocab[vi][3]);
+document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>{localStorage.learned=+(localStorage.learned||0)+1;if(b.dataset.rate==="2")localStorage.good=+(localStorage.good||0)+1;vi=(vi+1)%vocab.length;stats();drawWord()});
+el("listenAudio").onclick=()=>say(listening[li][0]);el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
+el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakAudio").onclick=()=>say(speaking[si][1]);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
+stats();drawListen();drawSpeak();
+if("serviceWorker" in navigator && location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script></body></html>
