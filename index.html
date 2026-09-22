@@ -43,13 +43,14 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px s
 <div class="tip" id="convTarget"></div>
 </div>
 <div class="card" style="text-align:center">
-<button id="micButton" class="primary" style="font-size:18px">🎤 マイクで答える</button>
-<p id="micStatus" class="muted">ボタンを押して英語で話してください。</p>
+<button id="micButton" class="primary" style="font-size:18px">🎤 押している間だけ話す</button>
+<p id="micStatus" class="muted">ボタンを押し続けて英語で話し、話し終わったら指を離してください。</p>
 <div id="transcriptBox" class="hide"><p class="muted">認識した英語</p><div class="big" id="transcript"></div><div id="keywordResult" class="tip"></div></div>
 <div id="fallbackBox" class="hide"><p class="muted">このブラウザでは音声認識を利用できない場合があります。</p><input id="fallbackInput" placeholder="英語を入力" style="width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;font-size:16px"><button id="fallbackCheck" class="soft" style="width:100%;margin-top:8px">入力した英文をチェック</button></div>
 </div>
 <div id="modelBox" class="card hide"><p class="muted">模範回答</p><div class="big" id="modelAnswer"></div><p id="modelJa"></p><button id="modelAudio" class="soft" style="width:100%">🔊 模範回答を聞く</button></div>
-<div class="row"><button id="showModel">模範回答</button><button id="convNext">次の質問</button></div>
+<div class="row" id="convControls"><button id="showModel">模範回答</button><button id="convNext">次の質問</button></div>
+<div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
 </section>
 
 </main>
@@ -84,75 +85,128 @@ const speaking=[
 {ja:"私は携帯を探しています。",en:"I'm looking for my phone.",ipa:"/aɪm ˈlʊkɪŋ fɔːr maɪ foʊn/"}
 ];
 const conversation=[
-{q:"What time do you usually get up?",targets:["usually","get up"],model:"I usually get up at seven.",ja:"私は普段7時に起きます。"},
-{q:"What do you usually drink in the morning?",targets:["usually"],model:"I usually drink coffee in the morning.",ja:"私は普段、朝にコーヒーを飲みます。"},
-{q:"Do you have enough time in the morning?",targets:["enough"],model:"Yes, I have enough time.",ja:"はい、十分な時間があります。"},
-{q:"What are you looking for?",targets:["look for"],model:"I'm looking for my phone.",ja:"私は携帯を探しています。"},
-{q:"What are you interested in?",targets:["interested in"],model:"I'm interested in English.",ja:"私は英語に興味があります。"}
+{keys:["usually","get up"],q:"What time do you usually get up?",targets:["usually","get up"],model:"I usually get up at seven.",ja:"私は普段7時に起きます。"},
+{keys:["usually"],q:"What do you usually drink in the morning?",targets:["usually"],model:"I usually drink coffee in the morning.",ja:"私は普段、朝にコーヒーを飲みます。"},
+{keys:["enough"],q:"Do you have enough time in the morning?",targets:["enough"],model:"Yes, I have enough time.",ja:"はい、十分な時間があります。"},
+{keys:["look for"],q:"What are you looking for?",targets:["look for"],model:"I'm looking for my phone.",ja:"私は携帯を探しています。"},
+{keys:["be interested in"],q:"What are you interested in?",targets:["interested in"],model:"I'm interested in English.",ja:"私は英語に興味があります。"},
+{keys:["decide"],q:"What did you decide to do today?",targets:["decide"],model:"I decided to study English.",ja:"私は英語を勉強することに決めました。"},
+{keys:["arrive"],q:"What time did you arrive?",targets:["arrive"],model:"I arrived at nine.",ja:"私は9時に到着しました。"},
+{keys:["important"],q:"What is important for you?",targets:["important"],model:"My family is important for me.",ja:"家族は私にとって大切です。"},
+{keys:["always"],q:"What do you always do in the morning?",targets:["always"],model:"I always drink water in the morning.",ja:"私は朝いつも水を飲みます。"},
+{keys:["sometimes"],q:"What do you sometimes do after dinner?",targets:["sometimes"],model:"I sometimes watch TV after dinner.",ja:"私は夕食後、ときどきテレビを見ます。"},
+{keys:["need"],q:"What do you need to do today?",targets:["need"],model:"I need to work today.",ja:"私は今日仕事をする必要があります。"},
+{keys:["different"],q:"What is different today?",targets:["different"],model:"The weather is different today.",ja:"今日は天気が違います。"}
 ];
-let ci=0,recognition=null;
+let ci=0,recognition=null,convSession=[],convResults=[];
+
 let vi=0,li=0,si=0;const el=id=>document.getElementById(id);
 function say(t,rate=1){if(!window.speechSynthesis){alert("Safariで開いてください。");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang="en-US";u.rate=rate;speechSynthesis.speak(u)}
 function today(){return new Date().toISOString().slice(0,10)}
 function stats(){let d=JSON.parse(localStorage.progress||"{}"), mastered=Object.values(d).filter(x=>x.level>=2).length,due=Object.values(d).filter(x=>x.next<=Date.now()).length;el("mastered").textContent=mastered;el("due").textContent=due;let last=localStorage.lastDay,st=+(localStorage.streak||0),td=today();if(last!==td){if(last){let a=new Date(last),b=new Date(td);st=((b-a)/86400000===1)?st+1:1}else st=1;localStorage.streak=st;localStorage.lastDay=td}el("streak").textContent=st}
-function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words")drawWord();if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation")drawConversation();scrollTo(0,0)}
+function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words")drawWord();if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation"){let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[]}drawConversation();}scrollTo(0,0)}
 function drawWord(){let v=vocab[vi];el("sessionLabel").textContent=(vi+1)+" / "+vocab.length;el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/vocab.length*100)+"%"}
-function rate(n){let d=JSON.parse(localStorage.progress||"{}"),v=vocab[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000};localStorage.progress=JSON.stringify(d);vi=(vi+1)%vocab.length;stats();drawWord()}
+function rate(n){let d=JSON.parse(localStorage.progress||"{}"),v=vocab[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000,lastRating:n,lastStudied:today()};localStorage.progress=JSON.stringify(d);let log=JSON.parse(localStorage.studyLog||"{}");if(!log[today()])log[today()]=[];if(!log[today()].includes(v.w))log[today()].push(v.w);localStorage.studyLog=JSON.stringify(log);vi=(vi+1)%vocab.length;stats();drawWord()}"),v=vocab[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000};localStorage.progress=JSON.stringify(d);vi=(vi+1)%vocab.length;stats();drawWord()}
 function drawListen(){let x=listening[li];el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
 function drawSpeak(){let x=speaking[si];el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
 
+function buildConversationSession(){
+ let log=JSON.parse(localStorage.studyLog||"{}"), learned=log[today()]||[], prog=JSON.parse(localStorage.progress||"{}");
+ let pool=conversation.filter(c=>c.keys.some(k=>learned.includes(k)));
+ pool.sort((a,b)=>{
+   let ar=Math.min(...a.keys.map(k=>(prog[k]?.lastRating ?? 1))), br=Math.min(...b.keys.map(k=>(prog[k]?.lastRating ?? 1)));
+   return ar-br;
+ });
+ let chosen=[];
+ for(let c of pool)if(!chosen.includes(c)&&chosen.length<5)chosen.push(c);
+ for(let c of conversation)if(!chosen.includes(c)&&chosen.length<5)chosen.push(c);
+ convSession=chosen;ci=0;convResults=[];
+}
 function drawConversation(){
- let x=conversation[ci];
- el("convCount").textContent=(ci+1)+" / "+conversation.length;
+ if(!convSession.length)buildConversationSession();
+ let x=convSession[ci];
+ el("convSummary").classList.add("hide");el("convControls").classList.remove("hide");
+ el("convCount").textContent=(ci+1)+" / "+convSession.length;
  el("convQuestion").textContent=x.q;
- el("convTarget").innerHTML="🎯 使ってみよう：<b>"+x.targets.join(" / ")+"</b>";
- el("convProgress").style.width=((ci+1)/conversation.length*100)+"%";
+ el("convTarget").innerHTML="🎯 今日使う表現：<b>"+x.targets.join(" / ")+"</b>";
+ el("convProgress").style.width=((ci+1)/convSession.length*100)+"%";
  el("transcriptBox").classList.add("hide");el("modelBox").classList.add("hide");
  el("transcript").textContent="";el("keywordResult").innerHTML="";
- el("micStatus").textContent="ボタンを押して英語で話してください。";
+ el("micStatus").textContent="ボタンを押し続けて英語で話し、話し終わったら指を離してください。";
  el("fallbackBox").classList.add("hide");
  if(!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) el("fallbackBox").classList.remove("hide");
 }
 function normalizeSpeech(s){return s.toLowerCase().replace(/[.,!?']/g,"").replace(/\s+/g," ").trim()}
+function targetOK(t,key){
+ key=normalizeSpeech(key);
+ if(t.includes(key))return true;
+ if(key==="look for"&&t.includes("looking for"))return true;
+ if(key==="get up"&&(t.includes("getting up")||t.includes("got up")))return true;
+ if(key==="decide"&&(t.includes("decided")||t.includes("deciding")))return true;
+ if(key==="arrive"&&(t.includes("arrived")||t.includes("arriving")))return true;
+ if(key==="be interested in"||key==="interested in")return t.includes("interested in");
+ return false;
+}
 function checkConversation(text){
- let x=conversation[ci],t=normalizeSpeech(text);
+ let x=convSession[ci],t=normalizeSpeech(text), oks=x.targets.map(k=>targetOK(t,k));
  el("transcript").textContent=text||"（認識できませんでした）";el("transcriptBox").classList.remove("hide");
- let checks=x.targets.map(k=>{
-   let key=normalizeSpeech(k);
-   let ok=t.includes(key);
-   if(!ok && key==="look for") ok=t.includes("looking for");
-   if(!ok && key==="get up") ok=t.includes("getting up")||t.includes("got up");
-   if(!ok && key==="interested in") ok=t.includes("interested in");
-   return (ok?"✅ ":"⬜ ")+k;
- });
- el("keywordResult").innerHTML=checks.join("<br>")+"<br><small>※ 文法の完全採点ではなく、今日の表現を使えたかを確認します。</small>";
+ el("keywordResult").innerHTML=x.targets.map((k,i)=>(oks[i]?"✅ ":"⬜ ")+k).join("<br>")+"<br><small>※ 文法の完全採点ではなく、今日の表現を使えたかを確認します。</small>";
+ convResults[ci]={targets:x.targets,oks:oks,text:text};
+}
+function finishConversation(){
+ stopMic();let total=0,hit=0,good=[],weak=[];
+ convResults.forEach(r=>{if(!r)return;r.targets.forEach((k,i)=>{total++;if(r.oks[i]){hit++;good.push(k)}else weak.push(k)})});
+ let uniq=a=>[...new Set(a)];
+ el("convScore").textContent=(hit)+" / "+total+" 表現を使えました";
+ el("convGood").innerHTML="<b>✅ 使えた表現</b><br>"+(uniq(good).join(" / ")||"—");
+ el("convWeak").innerHTML="<b>△ 復習したい表現</b><br>"+(uniq(weak).join(" / ")||"なし。よくできました！");
+ el("convSummary").classList.remove("hide");el("convControls").classList.add("hide");el("modelBox").classList.add("hide");
+ let prog=JSON.parse(localStorage.progress||"{}");uniq(weak).forEach(k=>{let key=k==="interested in"?"be interested in":k;if(prog[key])prog[key].next=Date.now()});localStorage.progress=JSON.stringify(prog);stats();
 }
 function startMic(){
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SR){el("fallbackBox").classList.remove("hide");el("micStatus").textContent="音声認識が使えないため、下の入力欄を使えます。";return}
+ stopMic();
  try{
-   if(recognition) recognition.abort();
-   recognition=new SR();recognition.lang="en-US";recognition.interimResults=true;recognition.continuous=false;
-   recognition.onstart=()=>{el("micStatus").textContent="🔴 聞いています… 英語で答えてください。";el("micButton").textContent="🎤 聞いています…"};
-   recognition.onresult=e=>{let s="";for(let i=e.resultIndex;i<e.results.length;i++)s+=e.results[i][0].transcript;if(s)checkConversation(s)};
-   recognition.onerror=e=>{el("micStatus").textContent="うまく聞き取れませんでした。もう一度試すか、入力欄を使ってください。";el("fallbackBox").classList.remove("hide")};
-   recognition.onend=()=>{el("micButton").textContent="🎤 もう一度答える";el("micStatus").textContent="必要なら、もう一度録音できます。"};
+   recognition=new SR();recognition.lang="en-US";recognition.interimResults=true;recognition.continuous=true;
+   recognition.onstart=()=>{el("micStatus").textContent="🔴 録音中：指を離すと停止します。";el("micButton").textContent="🔴 話してください…"};
+   recognition.onresult=e=>{let s="";for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;if(s)checkConversation(s)};
+   recognition.onerror=e=>{if(e.error!=="aborted"){el("micStatus").textContent="うまく聞き取れませんでした。もう一度試してください。";el("fallbackBox").classList.remove("hide")}resetMicUI()};
+   recognition.onend=()=>{resetMicUI();recognition=null};
    recognition.start();
- }catch(e){el("fallbackBox").classList.remove("hide")}
+ }catch(e){resetMicUI();el("fallbackBox").classList.remove("hide")}
+}
+function resetMicUI(){
+ el("micButton").textContent="🎤 押している間だけ話す";
+ if(el("micStatus").textContent.indexOf("うまく")<0) el("micStatus").textContent="マイク停止中。押し続けて話してください。";
+}
+function stopMic(){
+ if(recognition){
+   try{recognition.stop()}catch(e){try{recognition.abort()}catch(_){}}
+ }
 }
 
-document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>show(b.dataset.go));
+
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopMic();show(b.dataset.go)});
 el("wordSlow").onclick=()=>say(vocab[vi].w,.65);el("wordNormal").onclick=()=>say(vocab[vi].w,.9);el("exampleAudio").onclick=()=>say(vocab[vi].ex,.85);
 el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
 el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
 el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
 
-el("convQuestionAudio").onclick=()=>say(conversation[ci].q,.85);
-el("micButton").onclick=startMic;
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopMic()});
+window.addEventListener("pagehide",stopMic);
+window.addEventListener("beforeunload",stopMic);
+el("convQuestionAudio").onclick=()=>say(convSession[ci].q,.85);
+const mic=el("micButton");
+mic.onpointerdown=e=>{e.preventDefault();startMic()};
+mic.onpointerup=e=>{e.preventDefault();stopMic()};
+mic.onpointercancel=stopMic;
+mic.onpointerleave=e=>{if(e.buttons)stopMic()};
 el("fallbackCheck").onclick=()=>checkConversation(el("fallbackInput").value);
-el("showModel").onclick=()=>{let x=conversation[ci];el("modelAnswer").textContent=x.model;el("modelJa").textContent=x.ja;el("modelBox").classList.remove("hide")};
-el("modelAudio").onclick=()=>say(conversation[ci].model,.85);
-el("convNext").onclick=()=>{ci=(ci+1)%conversation.length;drawConversation()};
+el("showModel").onclick=()=>{let x=convSession[ci];el("modelAnswer").textContent=x.model;el("modelJa").textContent=x.ja;el("modelBox").classList.remove("hide")};
+el("modelAudio").onclick=()=>say(convSession[ci].model,.85);
+el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:""};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
+el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:conversation).slice(0,5);ci=0;convResults=[];drawConversation()};
 
 stats();drawListen();drawSpeak();drawConversation();if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script></body></html>
