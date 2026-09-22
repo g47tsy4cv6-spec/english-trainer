@@ -21,18 +21,18 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px s
 <div class="card"><span class="badge">TODAY'S CONVERSATION</span><h2>今日の会話</h2><p>今日の単語・熟語を使って、マイクで英語を答えます。認識結果と使えた表現をチェックします。</p><button class="primary" data-go="conversation">マイク会話を始める</button></div>
 </section>
 
-<section id="words" class="hide"><h1>単語・熟語</h1><p class="muted" id="sessionLabel"></p><div class="progress"><span id="progress"></span></div>
+<section id="words" class="hide"><h1>単語・熟語</h1><p class="muted" id="sessionLabel"></p><p class="muted" id="todayWordCount"></p><div class="progress"><span id="progress"></span></div>
 <div class="card"><div class="word" id="word"></div><div class="ipa" id="ipa"></div><div class="pos"><span class="badge" id="pos"></span></div>
 <div class="row" style="margin-top:12px"><button id="wordSlow" class="soft">🔊 ゆっくり</button><button id="wordNormal" class="soft">🔊 普通</button></div>
 <div id="answer" class="hide"><div class="meaning" id="meaning"></div><div class="example" id="example"></div><div class="tip" id="tip"></div><button id="exampleAudio" class="soft" style="width:100%;margin-top:10px">🔊 例文を聞く</button></div></div>
-<button id="reveal" class="primary">意味・例文を見る</button><div id="rating" class="row hide" style="margin-top:9px"><button data-rate="0">わからない</button><button data-rate="1">微妙</button><button data-rate="2">覚えた</button></div></section>
+<div class="row"><button id="wordPrev">← 前の問題</button><button id="reveal" class="primary">意味・例文を見る</button></div><div id="rating" class="row hide" style="margin-top:9px"><button data-rate="0">わからない</button><button data-rate="1">微妙</button><button data-rate="2">覚えた</button></div></section>
 
-<section id="listen" class="hide"><h1>リスニング</h1><p class="muted">まず文字を見ずに聞きます。</p><div class="card" style="text-align:center"><div style="font-size:48px">🎧</div><h2>何と言っている？</h2>
+<section id="listen" class="hide"><h1>リスニング</h1><p class="muted">まず文字を見ずに聞きます。</p><p class="muted" id="listenCount"></p><div class="card" style="text-align:center"><div style="font-size:48px">🎧</div><h2>何と言っている？</h2>
 <div class="speed"><button id="listenSlow" class="soft">0.7× ゆっくり</button><button id="listenNormal" class="primary">普通</button></div>
-<div id="listenAnswer" class="hide"><h2 id="listenEn"></h2><p id="listenJa"></p><div class="tip" id="listenTip"></div></div></div><div class="row"><button id="listenReveal">答えを見る</button><button id="listenNext">次へ</button></div></section>
+<div id="listenAnswer" class="hide"><h2 id="listenEn"></h2><p id="listenJa"></p><div class="tip" id="listenTip"></div></div></div><div class="row"><button id="listenPrev">← 前へ</button><button id="listenReveal">答えを見る</button><button id="listenNext">次へ</button></div></section>
 
-<section id="speak" class="hide"><h1>スピーキング</h1><p class="muted">日本語を見て、先に英語を声に出してください。</p><div class="card" style="text-align:center"><span class="badge">SAY IT IN ENGLISH</span><h2 id="speakJa"></h2>
-<div id="speakAnswer" class="hide"><h2 id="speakEn"></h2><div class="ipa" id="speakIpa"></div><button id="speakAudio" class="soft">🔊 正解を聞く</button></div></div><button id="speakReveal" class="primary">正解を見る</button><button id="speakNext" style="width:100%;margin-top:9px">次の問題</button></section>
+<section id="speak" class="hide"><h1>スピーキング</h1><p class="muted">日本語を見て、先に英語を声に出してください。</p><p class="muted" id="speakCount"></p><div class="card" style="text-align:center"><span class="badge">SAY IT IN ENGLISH</span><h2 id="speakJa"></h2>
+<div id="speakAnswer" class="hide"><h2 id="speakEn"></h2><div class="ipa" id="speakIpa"></div><button id="speakAudio" class="soft">🔊 正解を聞く</button></div></div><div class="row"><button id="speakPrev">← 前へ</button><button id="speakReveal" class="primary">正解を見る</button></div><button id="speakNext" style="width:100%;margin-top:9px">次の問題</button></section>
 
 <section id="conversation" class="hide"><h1>今日の会話</h1><p class="muted">質問を聞いて、指定された表現を使って英語で答えてください。</p>
 <div class="progress"><span id="convProgress"></span></div>
@@ -44,12 +44,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px s
 </div>
 <div class="card" style="text-align:center">
 <button id="micButton" class="primary" style="font-size:18px">🎤 押している間だけ話す</button>
-<p id="micStatus" class="muted">ボタンを押し続けて英語で話し、話し終わったら指を離してください。</p>
+<p id="micStatus" class="muted">ボタンを押し続けて英語で話し、話し終わったら指を離してください。</p><button id="micReset" class="soft" style="width:100%;margin-top:6px">↻ 言い直す・リセット</button>
 <div id="transcriptBox" class="hide"><p class="muted">認識した英語</p><div class="big" id="transcript"></div><div id="keywordResult" class="tip"></div></div>
 <div id="fallbackBox" class="hide"><p class="muted">このブラウザでは音声認識を利用できない場合があります。</p><input id="fallbackInput" placeholder="英語を入力" style="width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;font-size:16px"><button id="fallbackCheck" class="soft" style="width:100%;margin-top:8px">入力した英文をチェック</button></div>
 </div>
 <div id="modelBox" class="card hide"><p class="muted">模範回答</p><div class="big" id="modelAnswer"></div><p id="modelJa"></p><button id="modelAudio" class="soft" style="width:100%">🔊 模範回答を聞く</button></div>
-<div class="row" id="convControls"><button id="showModel">模範回答</button><button id="convNext">次の質問</button></div>
+<div class="row" id="convControls"><button id="convPrev">← 前へ</button><button id="showModel">模範回答</button><button id="convNext">次へ</button></div>
 <div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
 </section>
 
@@ -105,10 +105,10 @@ function say(t,rate=1){if(!window.speechSynthesis){alert("Safariで開いてく�
 function today(){return new Date().toISOString().slice(0,10)}
 function stats(){let d=JSON.parse(localStorage.progress||"{}"), mastered=Object.values(d).filter(x=>x.level>=2).length,due=Object.values(d).filter(x=>x.next<=Date.now()).length;el("mastered").textContent=mastered;el("due").textContent=due;let last=localStorage.lastDay,st=+(localStorage.streak||0),td=today();if(last!==td){if(last){let a=new Date(last),b=new Date(td);st=((b-a)/86400000===1)?st+1:1}else st=1;localStorage.streak=st;localStorage.lastDay=td}el("streak").textContent=st}
 function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words")drawWord();if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation"){let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[]}drawConversation();}scrollTo(0,0)}
-function drawWord(){let v=vocab[vi];el("sessionLabel").textContent=(vi+1)+" / "+vocab.length;el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/vocab.length*100)+"%"}
+function drawWord(){let v=vocab[vi],log=JSON.parse(localStorage.studyLog||"{}"),cnt=(log[today()]||[]).length;el("sessionLabel").textContent=(vi+1)+" / "+vocab.length;el("todayWordCount").textContent="今日学習した単語・熟語："+cnt+"個（1周しても記録は残ります）";el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/vocab.length*100)+"%"}
 function rate(n){let d=JSON.parse(localStorage.progress||"{}"),v=vocab[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000,lastRating:n,lastStudied:today()};localStorage.progress=JSON.stringify(d);let log=JSON.parse(localStorage.studyLog||"{}");if(!log[today()])log[today()]=[];if(!log[today()].includes(v.w))log[today()].push(v.w);localStorage.studyLog=JSON.stringify(log);vi=(vi+1)%vocab.length;stats();drawWord()}
-function drawListen(){let x=listening[li];el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
-function drawSpeak(){let x=speaking[si];el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
+function drawListen(){let x=listening[li];el("listenCount").textContent=(li+1)+" / "+listening.length;el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
+function drawSpeak(){let x=speaking[si];el("speakCount").textContent=(si+1)+" / "+speaking.length;el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
 
 function buildConversationSession(){
  let log=JSON.parse(localStorage.studyLog||"{}"), learned=log[today()]||[], prog=JSON.parse(localStorage.progress||"{}");
@@ -189,9 +189,9 @@ function stopMic(){
 
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopMic();show(b.dataset.go)});
 el("wordSlow").onclick=()=>say(vocab[vi].w,.65);el("wordNormal").onclick=()=>say(vocab[vi].w,.9);el("exampleAudio").onclick=()=>say(vocab[vi].ex,.85);
-el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
-el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
-el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
+el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};el("wordPrev").onclick=()=>{vi=(vi-1+vocab.length)%vocab.length;drawWord()};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
+el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenPrev").onclick=()=>{li=(li-1+listening.length)%listening.length;drawListen()};el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
+el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakPrev").onclick=()=>{si=(si-1+speaking.length)%speaking.length;drawSpeak()};el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
 
 document.addEventListener("visibilitychange",()=>{if(document.hidden)stopMic()});
 window.addEventListener("pagehide",stopMic);
@@ -205,6 +205,8 @@ mic.onpointerleave=e=>{if(e.buttons)stopMic()};
 el("fallbackCheck").onclick=()=>checkConversation(el("fallbackInput").value);
 el("showModel").onclick=()=>{let x=convSession[ci];el("modelAnswer").textContent=x.model;el("modelJa").textContent=x.ja;el("modelBox").classList.remove("hide")};
 el("modelAudio").onclick=()=>say(convSession[ci].model,.85);
+el("micReset").onclick=()=>{stopMic();convResults[ci]=null;el("transcriptBox").classList.add("hide");el("transcript").textContent="";el("keywordResult").innerHTML="";el("modelBox").classList.add("hide");el("micStatus").textContent="リセットしました。もう一度、押し続けて話してください。"};
+el("convPrev").onclick=()=>{stopMic();if(ci>0){ci--;drawConversation()}};
 el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:""};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
 el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:conversation).slice(0,5);ci=0;convResults=[];drawConversation()};
 
