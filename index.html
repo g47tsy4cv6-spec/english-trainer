@@ -50,7 +50,9 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px s
 </div>
 <div id="modelBox" class="card hide"><p class="muted">模範回答</p><div class="big" id="modelAnswer"></div><p id="modelJa"></p><button id="modelAudio" class="soft" style="width:100%">🔊 模範回答を聞く</button></div>
 <div class="row" id="convControls"><button id="convPrev">← 前へ</button><button id="showModel">模範回答</button><button id="convNext">次へ</button></div>
-<div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><div id="convGrammar" class="tip"></div><button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
+<div id="convSummary" class="card hide"><span class="badge">TODAY'S RESULT</span><h2>今日の会話結果</h2><div class="big" id="convScore"></div><div id="convGood" class="tip"></div><div id="convWeak" class="tip"></div><div id="convGrammar" class="tip"></div>
+<div id="convTranscriptWrap" class="tip"><b>📋 ChatGPTでチェックする用</b><p class="muted">質問と、あなたが実際に答えた英文をまとめます。</p><textarea id="convTranscriptList" rows="14" style="width:100%;box-sizing:border-box"></textarea><button id="copyConversation" class="primary" style="width:100%;margin-top:8px">コピーする</button><p id="copyStatus" class="muted"></p></div>
+<button id="convRetry" class="primary" style="margin-top:10px">苦手表現をもう一度</button></div>
 </section>
 
 </main>
@@ -69,7 +71,46 @@ const vocab=[
 {w:"always",ipa:"/ˈɔːlweɪz/",pos:"副詞 · adverb",m:"いつも",ex:"I always drink coffee in the morning.",ja:"私は朝いつもコーヒーを飲みます。",tip:"頻度を表す副詞。usually より頻度が高い。"},
 {w:"sometimes",ipa:"/ˈsʌmtaɪmz/",pos:"副詞 · adverb",m:"ときどき",ex:"I sometimes cook dinner.",ja:"私はときどき夕食を作ります。",tip:"文頭に Sometimes, と置くこともできる。"},
 {w:"need",ipa:"/niːd/",pos:"動詞 · verb",m:"必要とする、〜する必要がある",ex:"I need to go now.",ja:"私はもう行く必要があります。",tip:"need to + 動詞 =「〜する必要がある」。"},
-{w:"different",ipa:"/ˈdɪfrənt/",pos:"形容詞 · adjective",m:"異なる、違う",ex:"This one is different.",ja:"これは違います。",tip:"different from + 名詞 =「〜とは違う」。"}
+{w:"different",ipa:"/ˈdɪfrənt/",pos:"形容詞 · adjective",m:"異なる、違う",ex:"This one is different.",ja:"これは違います。",tip:"different from + 名詞 =「〜とは違う」。"},{w:"want",ipa:"/wɑːnt/",pos:"動詞 · verb",m:"欲しい、〜したい",ex:"I want to learn English.",ja:"私は英語を学びたいです。",tip:"want to + 動詞 =「〜したい」。"}
+,{w:"think",ipa:"/θɪŋk/",pos:"動詞 · verb",m:"思う、考える",ex:"I think this is good.",ja:"私はこれは良いと思います。",tip:"I think + 文 で自分の考えを表せる。"}
+,{w:"know",ipa:"/noʊ/",pos:"動詞 · verb",m:"知っている",ex:"I know the answer.",ja:"私は答えを知っています。",tip:"know は状態を表すので進行形にしないことが多い。"}
+,{w:"learn",ipa:"/lɜːrn/",pos:"動詞 · verb",m:"学ぶ、身につける",ex:"I learn English every day.",ja:"私は毎日英語を学びます。",tip:"learn は知識や技能を身につけること。"}
+,{w:"practice",ipa:"/ˈpræktɪs/",pos:"動詞・名詞 · verb / noun",m:"練習する、練習",ex:"I practice English every day.",ja:"私は毎日英語を練習します。",tip:"practice + 名詞 / -ing の形をよく使う。"}
+,{w:"remember",ipa:"/rɪˈmembər/",pos:"動詞 · verb",m:"覚えている、思い出す",ex:"I remember his name.",ja:"私は彼の名前を覚えています。",tip:"remember to do は「忘れずに〜する」。"}
+,{w:"forget",ipa:"/fərˈɡet/",pos:"動詞 · verb",m:"忘れる",ex:"Don't forget your bag.",ja:"バッグを忘れないで。",tip:"forget to do =「〜するのを忘れる」。"}
+,{w:"start",ipa:"/stɑːrt/",pos:"動詞 · verb",m:"始める、始まる",ex:"I start work at nine.",ja:"私は9時に仕事を始めます。",tip:"start to do / start -ing の両方を使える。"}
+,{w:"finish",ipa:"/ˈfɪnɪʃ/",pos:"動詞 · verb",m:"終える、終わる",ex:"I finish work at six.",ja:"私は6時に仕事を終えます。",tip:"finish -ing =「〜し終える」。"}
+,{w:"help",ipa:"/help/",pos:"動詞・名詞 · verb / noun",m:"助ける、手伝う",ex:"Can you help me?",ja:"手伝ってもらえますか？",tip:"help + 人 + 動詞 で「人が〜するのを手伝う」。"}
+,{w:"ask",ipa:"/æsk/",pos:"動詞 · verb",m:"尋ねる、頼む",ex:"Can I ask a question?",ja:"質問してもいいですか？",tip:"ask a question =「質問する」。"}
+,{w:"answer",ipa:"/ˈænsər/",pos:"動詞・名詞 · verb / noun",m:"答える、答え",ex:"Please answer the question.",ja:"その質問に答えてください。",tip:"answer + 質問。answer to は名詞で「〜への答え」。"}
+,{w:"tell",ipa:"/tel/",pos:"動詞 · verb",m:"伝える、教える",ex:"Please tell me your name.",ja:"名前を教えてください。",tip:"tell + 人 + 内容 の語順。"}
+,{w:"show",ipa:"/ʃoʊ/",pos:"動詞 · verb",m:"見せる、示す",ex:"Please show me the menu.",ja:"メニューを見せてください。",tip:"show + 人 + 物 =「人に物を見せる」。"}
+,{w:"use",ipa:"/juːz/",pos:"動詞 · verb",m:"使う",ex:"I use this every day.",ja:"私はこれを毎日使います。",tip:"use + 物 で「〜を使う」。"}
+,{w:"make",ipa:"/meɪk/",pos:"動詞 · verb",m:"作る",ex:"I make dinner at home.",ja:"私は家で夕食を作ります。",tip:"make は何かを作り出すイメージ。"}
+,{w:"take",ipa:"/teɪk/",pos:"動詞 · verb",m:"取る、持っていく、かかる",ex:"It takes ten minutes.",ja:"10分かかります。",tip:"take は意味が多いので例文ごと覚える。"}
+,{w:"give",ipa:"/ɡɪv/",pos:"動詞 · verb",m:"与える、渡す",ex:"Please give me some water.",ja:"水を少しください。",tip:"give + 人 + 物 =「人に物を与える」。"}
+,{w:"bring",ipa:"/brɪŋ/",pos:"動詞 · verb",m:"持ってくる",ex:"Please bring your notebook.",ja:"ノートを持ってきてください。",tip:"bring は話し手のいる方へ持ってくる。"}
+,{w:"buy",ipa:"/baɪ/",pos:"動詞 · verb",m:"買う",ex:"I want to buy a new bag.",ja:"新しいバッグを買いたいです。",tip:"buy + 物、buy + 人 + 物 の形を使える。"}
+,{w:"choose",ipa:"/tʃuːz/",pos:"動詞 · verb",m:"選ぶ",ex:"You can choose one.",ja:"1つ選べます。",tip:"choose A from B =「BからAを選ぶ」。"}
+,{w:"try",ipa:"/traɪ/",pos:"動詞 · verb",m:"試す、やってみる",ex:"I want to try it.",ja:"それを試してみたいです。",tip:"try to do と try -ing は意味が少し違う。"}
+,{w:"wait",ipa:"/weɪt/",pos:"動詞 · verb",m:"待つ",ex:"Please wait here.",ja:"ここで待ってください。",tip:"wait for + 人・物 =「〜を待つ」。"}
+,{w:"meet",ipa:"/miːt/",pos:"動詞 · verb",m:"会う",ex:"I will meet my friend.",ja:"友達に会います。",tip:"初対面にも待ち合わせにも使える。"}
+,{w:"leave",ipa:"/liːv/",pos:"動詞 · verb",m:"出発する、去る",ex:"I leave home at eight.",ja:"私は8時に家を出ます。",tip:"leave + 場所 =「場所を出る」。"}
+,{w:"early",ipa:"/ˈɜːrli/",pos:"形容詞・副詞 · adjective / adverb",m:"早い、早く",ex:"I got up early today.",ja:"私は今日早く起きました。",tip:"時間が予定より早いことを表す。"}
+,{w:"late",ipa:"/leɪt/",pos:"形容詞・副詞 · adjective / adverb",m:"遅い、遅く",ex:"I was late for work.",ja:"私は仕事に遅れました。",tip:"be late for + 名詞 =「〜に遅れる」。"}
+,{w:"busy",ipa:"/ˈbɪzi/",pos:"形容詞 · adjective",m:"忙しい",ex:"I'm busy today.",ja:"私は今日忙しいです。",tip:"be busy with + 名詞 もよく使う。"}
+,{w:"ready",ipa:"/ˈredi/",pos:"形容詞 · adjective",m:"準備ができた",ex:"I'm ready to go.",ja:"出発する準備ができています。",tip:"be ready to + 動詞 =「〜する準備ができている」。"}
+,{w:"easy",ipa:"/ˈiːzi/",pos:"形容詞 · adjective",m:"簡単な",ex:"This question is easy.",ja:"この問題は簡単です。",tip:"easy to + 動詞 =「〜しやすい」。"}
+,{w:"difficult",ipa:"/ˈdɪfɪkəlt/",pos:"形容詞 · adjective",m:"難しい",ex:"English is difficult sometimes.",ja:"英語はときどき難しいです。",tip:"hard と近い意味で使える。"}
+,{w:"favorite",ipa:"/ˈfeɪvərɪt/",pos:"形容詞・名詞 · adjective / noun",m:"お気に入りの、一番好きな",ex:"What's your favorite food?",ja:"一番好きな食べ物は何ですか？",tip:"favorite の中に already「一番好き」の意味がある。"}
+,{w:"because",ipa:"/bɪˈkɔːz/",pos:"接続詞 · conjunction",m:"なぜなら、〜だから",ex:"I study English because it's useful.",ja:"役に立つので英語を勉強します。",tip:"理由を続けるときに使う。"}
+,{w:"before",ipa:"/bɪˈfɔːr/",pos:"前置詞・接続詞・副詞 · preposition / conjunction / adverb",m:"〜の前に",ex:"I eat breakfast before work.",ja:"仕事の前に朝食を食べます。",tip:"時間の前後関係を表す。"}
+,{w:"after",ipa:"/ˈæftər/",pos:"前置詞・接続詞 · preposition / conjunction",m:"〜の後に",ex:"I study after dinner.",ja:"夕食後に勉強します。",tip:"after + 名詞 / 文 で使える。"}
+,{w:"together",ipa:"/təˈɡeðər/",pos:"副詞 · adverb",m:"一緒に",ex:"Let's study together.",ja:"一緒に勉強しましょう。",tip:"do something together =「一緒に〜する」。"}
+,{w:"again",ipa:"/əˈɡen/",pos:"副詞 · adverb",m:"もう一度",ex:"Please say that again.",ja:"もう一度言ってください。",tip:"聞き返すときにも便利。"}
+,{w:"maybe",ipa:"/ˈmeɪbi/",pos:"副詞 · adverb",m:"たぶん、もしかすると",ex:"Maybe I'll go tomorrow.",ja:"たぶん明日行きます。",tip:"文頭に置くことが多い。"}
+,{w:"really",ipa:"/ˈriːəli/",pos:"副詞 · adverb",m:"本当に、とても",ex:"I really like this.",ja:"私はこれが本当に好きです。",tip:"動詞や形容詞を強める。"}
+,{w:"still",ipa:"/stɪl/",pos:"副詞 · adverb",m:"まだ、今でも",ex:"I'm still studying.",ja:"私はまだ勉強しています。",tip:"動作や状態が続いていることを表す。"}
 ];
 const listening=[
 {en:"Do you like coffee?",ja:"コーヒーは好きですか？",tip:"Do you は会話では語がつながり、1つのまとまりのように聞こえます。"},
@@ -100,13 +141,30 @@ const conversation=[
 ];
 let ci=0,recognition=null,convSession=[],convResults=[];
 
-let vi=0,li=0,si=0;const el=id=>document.getElementById(id);
+let vi=0,li=0,si=0,dailyWords=[];const el=id=>document.getElementById(id);
+function dayNumber(s){let d=new Date(s+"T00:00:00");return Math.floor(d.getTime()/86400000)}
+function courseStart(){
+ let log=JSON.parse(localStorage.studyLog||"{}"),days=Object.keys(log).sort();
+ if(days.length)return days[0];
+ if(!localStorage.courseStartDay)localStorage.courseStartDay=today();
+ return localStorage.courseStartDay;
+}
+function buildDailyWords(){
+ let prog=JSON.parse(localStorage.progress||"{}"),start=dayNumber(courseStart()),now=dayNumber(today()),day=Math.max(0,now-start);
+ let newStart=day*10,newWords=vocab.slice(newStart,newStart+10);
+ if(!newWords.length){newStart=(day%Math.max(1,Math.ceil(vocab.length/10)))*10;newWords=vocab.slice(newStart,newStart+10)}
+ let review=vocab.filter(v=>prog[v.w]&&prog[v.w].next<=Date.now()&&!newWords.some(n=>n.w===v.w));
+ review.sort((a,b)=>(prog[a.w].lastRating??1)-(prog[b.w].lastRating??1));
+ dailyWords=[...review.slice(0,5),...newWords];
+ if(!dailyWords.length)dailyWords=vocab.slice(0,10);
+ if(vi>=dailyWords.length)vi=0;
+}
 function say(t,rate=1){if(!window.speechSynthesis){alert("Safariで開いてください。");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang="en-US";u.rate=rate;speechSynthesis.speak(u)}
 function today(){return new Date().toISOString().slice(0,10)}
 function stats(){let d=JSON.parse(localStorage.progress||"{}"), mastered=Object.values(d).filter(x=>x.level>=2).length,due=Object.values(d).filter(x=>x.next<=Date.now()).length;el("mastered").textContent=mastered;el("due").textContent=due;let last=localStorage.lastDay,st=+(localStorage.streak||0),td=today();if(last!==td){if(last){let a=new Date(last),b=new Date(td);st=((b-a)/86400000===1)?st+1:1}else st=1;localStorage.streak=st;localStorage.lastDay=td}el("streak").textContent=st}
-function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words")drawWord();if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation"){let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[]}drawConversation();}scrollTo(0,0)}
-function drawWord(){let v=vocab[vi],log=JSON.parse(localStorage.studyLog||"{}"),cnt=(log[today()]||[]).length;el("sessionLabel").textContent=(vi+1)+" / "+vocab.length;el("todayWordCount").textContent="今日学習した単語・熟語："+cnt+"個（1周しても記録は残ります）";el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/vocab.length*100)+"%"}
-function rate(n){let d=JSON.parse(localStorage.progress||"{}"),v=vocab[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000,lastRating:n,lastStudied:today()};localStorage.progress=JSON.stringify(d);let log=JSON.parse(localStorage.studyLog||"{}");if(!log[today()])log[today()]=[];if(!log[today()].includes(v.w))log[today()].push(v.w);localStorage.studyLog=JSON.stringify(log);vi=(vi+1)%vocab.length;stats();drawWord()}
+function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words"){buildDailyWords();drawWord();}if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation"){let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[]}drawConversation();}scrollTo(0,0)}
+function drawWord(){if(!dailyWords.length)buildDailyWords();let v=dailyWords[vi],log=JSON.parse(localStorage.studyLog||"{}"),cnt=(log[today()]||[]).length,newCount=Math.min(10,dailyWords.length),reviewCount=Math.max(0,dailyWords.length-newCount);el("sessionLabel").textContent=(vi+1)+" / "+dailyWords.length+"　今日の新出＋復習";el("todayWordCount").textContent="今日学習済み："+cnt+"個　／　今日のセット："+dailyWords.length+"個";el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/dailyWords.length*100)+"%"}
+function rate(n){if(!dailyWords.length)buildDailyWords();let d=JSON.parse(localStorage.progress||"{}"),v=dailyWords[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000,lastRating:n,lastStudied:today()};localStorage.progress=JSON.stringify(d);let log=JSON.parse(localStorage.studyLog||"{}");if(!log[today()])log[today()]=[];if(!log[today()].includes(v.w))log[today()].push(v.w);localStorage.studyLog=JSON.stringify(log);vi=(vi+1)%dailyWords.length;stats();drawWord()}
 function drawListen(){let x=listening[li];el("listenCount").textContent=(li+1)+" / "+listening.length;el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
 function drawSpeak(){let x=speaking[si];el("speakCount").textContent=(si+1)+" / "+speaking.length;el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
 
@@ -194,6 +252,9 @@ function finishConversation(){
  el("convWeak").innerHTML="<b>△ 復習したい表現</b><br>"+(uniq(weak).join(" / ")||"なし。よくできました！");
  let gIssues=convResults.filter(r=>r&&r.grammar&&r.grammar.level==="△");
  el("convGrammar").innerHTML="<b>📝 文法チェック</b><br>"+(gIssues.length?gIssues.length+"問で確認ポイントがありました。各問題に戻って内容を確認できます。":"基本文法の確認ポイントはありませんでした。");
+ let lines=["以下は英会話練習の質問と私の回答です。各回答について、①文法が正しいか ②より自然な言い方 ③間違いがあれば理由を、日本語で簡潔に教えてください。",""];
+ convSession.forEach((q,i)=>{let r=convResults[i];lines.push((i+1)+". Question: "+q.q);lines.push("My answer: "+((r&&r.text)?r.text:"（未回答）"));lines.push("")});
+ el("convTranscriptList").value=lines.join("\n");el("copyStatus").textContent="";
  el("convSummary").classList.remove("hide");el("convControls").classList.add("hide");el("modelBox").classList.add("hide");
  let prog=JSON.parse(localStorage.progress||"{}");uniq(weak).forEach(k=>{let key=k==="interested in"?"be interested in":k;if(prog[key])prog[key].next=Date.now()});localStorage.progress=JSON.stringify(prog);stats();
 }
@@ -223,7 +284,7 @@ function stopMic(){
 
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopMic();show(b.dataset.go)});
 el("wordSlow").onclick=()=>say(vocab[vi].w,.65);el("wordNormal").onclick=()=>say(vocab[vi].w,.9);el("exampleAudio").onclick=()=>say(vocab[vi].ex,.85);
-el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};el("wordPrev").onclick=()=>{vi=(vi-1+vocab.length)%vocab.length;drawWord()};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
+el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};el("wordPrev").onclick=()=>{vi=(vi-1+dailyWords.length)%dailyWords.length;drawWord()};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
 el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenPrev").onclick=()=>{li=(li-1+listening.length)%listening.length;drawListen()};el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
 el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakPrev").onclick=()=>{si=(si-1+speaking.length)%speaking.length;drawSpeak()};el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
 
@@ -242,6 +303,7 @@ el("modelAudio").onclick=()=>say(convSession[ci].model,.85);
 el("micReset").onclick=()=>{stopMic();convResults[ci]=null;el("transcriptBox").classList.add("hide");el("transcript").textContent="";el("keywordResult").innerHTML="";el("grammarResult").innerHTML="";el("grammarResult").classList.add("hide");el("modelBox").classList.add("hide");el("micStatus").textContent="リセットしました。もう一度、押し続けて話してください。"};
 el("convPrev").onclick=()=>{stopMic();if(ci>0){ci--;drawConversation()}};
 el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:"",grammar:{level:"—",msg:"未回答"}};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
+el("copyConversation").onclick=async()=>{let t=el("convTranscriptList").value;try{await navigator.clipboard.writeText(t);el("copyStatus").textContent="コピーしました。ChatGPTにそのまま貼り付けられます。"}catch(e){el("convTranscriptList").select();document.execCommand("copy");el("copyStatus").textContent="コピーしました。"}};
 el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:conversation).slice(0,5);ci=0;convResults=[];drawConversation()};
 
 stats();drawListen();drawSpeak();drawConversation();if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
