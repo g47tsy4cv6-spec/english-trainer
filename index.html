@@ -283,7 +283,7 @@ function stopMic(){
 
 
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopMic();show(b.dataset.go)});
-el("wordSlow").onclick=()=>say(vocab[vi].w,.65);el("wordNormal").onclick=()=>say(vocab[vi].w,.9);el("exampleAudio").onclick=()=>say(vocab[vi].ex,.85);
+el("wordSlow").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].w,.65)};el("wordNormal").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].w,.9)};el("exampleAudio").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].ex,.85)};
 el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};el("wordPrev").onclick=()=>{vi=(vi-1+dailyWords.length)%dailyWords.length;drawWord()};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
 el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenPrev").onclick=()=>{li=(li-1+listening.length)%listening.length;drawListen()};el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
 el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakPrev").onclick=()=>{si=(si-1+speaking.length)%speaking.length;drawSpeak()};el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
