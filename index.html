@@ -141,7 +141,72 @@ const conversation=[
 ];
 let ci=0,recognition=null,convSession=[],convResults=[];
 
-let vi=0,li=0,si=0,dailyWords=[];const el=id=>document.getElementById(id);
+let vi=0,li=0,si=0,dailyWords=[],dailyListening=[],dailySpeaking=[];const el=id=>document.getElementById(id);
+function makeQuestionForWord(v){
+ const map={
+ "usually":["What do you usually do in the morning?","I usually get up at seven."],
+ "enough":["Do you have enough time today?","Yes, I have enough time."],
+ "decide":["What did you decide to do today?","I decided to study English."],
+ "arrive":["What time did you arrive?","I arrived at nine."],
+ "important":["What is important for you?","My family is important for me."],
+ "get up":["What time do you get up?","I get up at seven."],
+ "look for":["What are you looking for?","I'm looking for my phone."],
+ "be interested in":["What are you interested in?","I'm interested in English."],
+ "always":["What do you always do in the morning?","I always drink water in the morning."],
+ "sometimes":["What do you sometimes do after dinner?","I sometimes watch TV after dinner."],
+ "need":["What do you need to do today?","I need to work today."],
+ "different":["What is different today?","The weather is different today."],
+ "want":["What do you want to do today?","I want to study English."],
+ "think":["What do you think about English?","I think English is interesting."],
+ "know":["Do you know the answer?","Yes, I know the answer."],
+ "learn":["What do you want to learn?","I want to learn English."],
+ "practice":["What do you practice every day?","I practice English every day."],
+ "remember":["What do you remember?","I remember his name."],
+ "forget":["What do you often forget?","I sometimes forget my bag."],
+ "start":["What time do you start work?","I start work at nine."],
+ "finish":["What time do you finish work?","I finish work at six."],
+ "help":["Who do you help?","I help my family."],
+ "ask":["What do you want to ask?","I want to ask a question."],
+ "answer":["Can you answer this question?","Yes, I can answer it."],
+ "tell":["What can you tell me?","I can tell you my name."],
+ "show":["What can you show me?","I can show you the menu."],
+ "use":["What do you use every day?","I use my phone every day."],
+ "make":["What do you make at home?","I make dinner at home."],
+ "take":["How long does it take?","It takes ten minutes."],
+ "give":["What can you give me?","I can give you some water."],
+ "bring":["What do you bring to work?","I bring my notebook."],
+ "buy":["What do you want to buy?","I want to buy a new bag."],
+ "choose":["Which one do you choose?","I choose this one."],
+ "try":["What do you want to try?","I want to try it."],
+ "wait":["Who are you waiting for?","I'm waiting for my friend."],
+ "meet":["Who will you meet?","I will meet my friend."],
+ "leave":["What time do you leave home?","I leave home at eight."],
+ "early":["Did you get up early today?","Yes, I got up early today."],
+ "late":["Were you late today?","No, I wasn't late today."],
+ "busy":["Are you busy today?","Yes, I'm busy today."],
+ "ready":["Are you ready to go?","Yes, I'm ready to go."],
+ "easy":["Is English easy for you?","Sometimes English is easy for me."],
+ "difficult":["What is difficult for you?","Listening is difficult for me."],
+ "favorite":["What's your favorite food?","My favorite food is curry."],
+ "because":["Why do you study English?","I study English because it's useful."],
+ "before":["What do you do before work?","I eat breakfast before work."],
+ "after":["What do you do after dinner?","I study English after dinner."],
+ "together":["Who do you study with?","I study together with my friend."],
+ "again":["What do you want to hear again?","I want to hear the question again."],
+ "maybe":["Will you study tomorrow?","Maybe I'll study tomorrow."],
+ "really":["What do you really like?","I really like coffee."],
+ "still":["Are you still studying English?","Yes, I'm still studying English."]
+ };
+ return map[v.w]||["Can you use '"+v.w+"' in a sentence?",v.ex];
+}
+function buildLinkedPractice(){
+ if(!dailyWords.length)buildDailyWords();
+ let set=dailyWords.slice(0,5);
+ dailyListening=set.map(v=>({en:v.ex,ja:v.ja,tip:"今日の単語・熟語「"+v.w+"」を聞き取ってみましょう。"}));
+ dailySpeaking=set.map(v=>({ja:v.ja,en:v.ex,ipa:v.ipa}));
+ convSession=set.map(v=>{let qa=makeQuestionForWord(v);let target=v.w==="be interested in"?"interested in":v.w;return {keys:[v.w],q:qa[0],targets:[target],model:qa[1],ja:v.ja}});
+ li=Math.min(li,Math.max(0,dailyListening.length-1));si=Math.min(si,Math.max(0,dailySpeaking.length-1));
+}
 function dayNumber(s){let d=new Date(s+"T00:00:00");return Math.floor(d.getTime()/86400000)}
 function courseStart(){
  let log=JSON.parse(localStorage.studyLog||"{}"),days=Object.keys(log).sort();
@@ -162,24 +227,13 @@ function buildDailyWords(){
 function say(t,rate=1){if(!window.speechSynthesis){alert("Safariで開いてください。");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang="en-US";u.rate=rate;speechSynthesis.speak(u)}
 function today(){return new Date().toISOString().slice(0,10)}
 function stats(){let d=JSON.parse(localStorage.progress||"{}"), mastered=Object.values(d).filter(x=>x.level>=2).length,due=Object.values(d).filter(x=>x.next<=Date.now()).length;el("mastered").textContent=mastered;el("due").textContent=due;let last=localStorage.lastDay,st=+(localStorage.streak||0),td=today();if(last!==td){if(last){let a=new Date(last),b=new Date(td);st=((b-a)/86400000===1)?st+1:1}else st=1;localStorage.streak=st;localStorage.lastDay=td}el("streak").textContent=st}
-function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words"){buildDailyWords();drawWord();}if(id==="listen")drawListen();if(id==="speak")drawSpeak();if(id==="conversation"){let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[]}drawConversation();}scrollTo(0,0)}
+function show(id){document.querySelectorAll("main section").forEach(s=>s.classList.add("hide"));el(id).classList.remove("hide");if(id==="words"){buildDailyWords();drawWord();}if(id==="listen"){buildDailyWords();buildLinkedPractice();drawListen();}if(id==="speak"){buildDailyWords();buildLinkedPractice();drawSpeak();}if(id==="conversation"){buildDailyWords();let sd=localStorage.convDay;if(sd!==today()){localStorage.convDay=today();convSession=[];convResults=[]}if(!convSession.length)buildLinkedPractice();drawConversation();}scrollTo(0,0)}
 function drawWord(){if(!dailyWords.length)buildDailyWords();let v=dailyWords[vi],log=JSON.parse(localStorage.studyLog||"{}"),cnt=(log[today()]||[]).length,newCount=Math.min(10,dailyWords.length),reviewCount=Math.max(0,dailyWords.length-newCount);el("sessionLabel").textContent=(vi+1)+" / "+dailyWords.length+"　今日の新出＋復習";el("todayWordCount").textContent="今日学習済み："+cnt+"個　／　今日のセット："+dailyWords.length+"個";el("word").textContent=v.w;el("ipa").textContent=v.ipa;el("pos").textContent=v.pos;el("meaning").textContent=v.m;el("example").innerHTML="<b>"+v.ex+"</b><br>"+v.ja;el("tip").innerHTML="💡 "+v.tip;el("answer").classList.add("hide");el("rating").classList.add("hide");el("reveal").classList.remove("hide");el("progress").style.width=((vi+1)/dailyWords.length*100)+"%"}
 function rate(n){if(!dailyWords.length)buildDailyWords();let d=JSON.parse(localStorage.progress||"{}"),v=dailyWords[vi],days=n===0?0.04:n===1?1:3,old=d[v.w]||{level:0};d[v.w]={level:n===2?Math.min(3,old.level+1):n,next:Date.now()+days*86400000,lastRating:n,lastStudied:today()};localStorage.progress=JSON.stringify(d);let log=JSON.parse(localStorage.studyLog||"{}");if(!log[today()])log[today()]=[];if(!log[today()].includes(v.w))log[today()].push(v.w);localStorage.studyLog=JSON.stringify(log);vi=(vi+1)%dailyWords.length;stats();drawWord()}
-function drawListen(){let x=listening[li];el("listenCount").textContent=(li+1)+" / "+listening.length;el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
-function drawSpeak(){let x=speaking[si];el("speakCount").textContent=(si+1)+" / "+speaking.length;el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
+function drawListen(){if(!dailyListening.length)buildLinkedPractice();let x=dailyListening[li];el("listenCount").textContent=(li+1)+" / "+dailyListening.length;el("listenEn").textContent=x.en;el("listenJa").textContent=x.ja;el("listenTip").textContent="💡 "+x.tip;el("listenAnswer").classList.add("hide")}
+function drawSpeak(){if(!dailySpeaking.length)buildLinkedPractice();let x=dailySpeaking[si];el("speakCount").textContent=(si+1)+" / "+dailySpeaking.length;el("speakJa").textContent=x.ja;el("speakEn").textContent=x.en;el("speakIpa").textContent=x.ipa;el("speakAnswer").classList.add("hide")}
 
-function buildConversationSession(){
- let log=JSON.parse(localStorage.studyLog||"{}"), learned=log[today()]||[], prog=JSON.parse(localStorage.progress||"{}");
- let pool=conversation.filter(c=>c.keys.some(k=>learned.includes(k)));
- pool.sort((a,b)=>{
-   let ar=Math.min(...a.keys.map(k=>(prog[k]?.lastRating ?? 1))), br=Math.min(...b.keys.map(k=>(prog[k]?.lastRating ?? 1)));
-   return ar-br;
- });
- let chosen=[];
- for(let c of pool)if(!chosen.includes(c)&&chosen.length<5)chosen.push(c);
- for(let c of conversation)if(!chosen.includes(c)&&chosen.length<5)chosen.push(c);
- convSession=chosen;ci=0;convResults=[];
-}
+function buildConversationSession(){buildDailyWords();buildLinkedPractice();ci=0;convResults=[];}
 function drawConversation(){
  if(!convSession.length)buildConversationSession();
  let x=convSession[ci];
@@ -285,8 +339,8 @@ function stopMic(){
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopMic();show(b.dataset.go)});
 el("wordSlow").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].w,.65)};el("wordNormal").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].w,.9)};el("exampleAudio").onclick=()=>{if(!dailyWords.length)buildDailyWords();say(dailyWords[vi].ex,.85)};
 el("reveal").onclick=()=>{el("answer").classList.remove("hide");el("rating").classList.remove("hide");el("reveal").classList.add("hide")};el("wordPrev").onclick=()=>{vi=(vi-1+dailyWords.length)%dailyWords.length;drawWord()};document.querySelectorAll("[data-rate]").forEach(b=>b.onclick=()=>rate(+b.dataset.rate));
-el("listenSlow").onclick=()=>say(listening[li].en,.65);el("listenNormal").onclick=()=>say(listening[li].en,1);el("listenPrev").onclick=()=>{li=(li-1+listening.length)%listening.length;drawListen()};el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%listening.length;drawListen()};
-el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakPrev").onclick=()=>{si=(si-1+speaking.length)%speaking.length;drawSpeak()};el("speakAudio").onclick=()=>say(speaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%speaking.length;drawSpeak()};
+el("listenSlow").onclick=()=>say(dailyListening[li].en,.65);el("listenNormal").onclick=()=>say(dailyListening[li].en,1);el("listenPrev").onclick=()=>{li=(li-1+dailyListening.length)%dailyListening.length;drawListen()};el("listenReveal").onclick=()=>el("listenAnswer").classList.remove("hide");el("listenNext").onclick=()=>{li=(li+1)%dailyListening.length;drawListen()};
+el("speakReveal").onclick=()=>el("speakAnswer").classList.remove("hide");el("speakPrev").onclick=()=>{si=(si-1+dailySpeaking.length)%dailySpeaking.length;drawSpeak()};el("speakAudio").onclick=()=>say(dailySpeaking[si].en,.85);el("speakNext").onclick=()=>{si=(si+1)%dailySpeaking.length;drawSpeak()};
 
 document.addEventListener("visibilitychange",()=>{if(document.hidden)stopMic()});
 window.addEventListener("pagehide",stopMic);
@@ -304,7 +358,7 @@ el("micReset").onclick=()=>{stopMic();convResults[ci]=null;el("transcriptBox").c
 el("convPrev").onclick=()=>{stopMic();if(ci>0){ci--;drawConversation()}};
 el("convNext").onclick=()=>{if(!convResults[ci])convResults[ci]={targets:convSession[ci].targets,oks:convSession[ci].targets.map(()=>false),text:"",grammar:{level:"—",msg:"未回答"}};if(ci>=convSession.length-1)finishConversation();else{ci++;drawConversation()}};
 el("copyConversation").onclick=async()=>{let t=el("convTranscriptList").value;try{await navigator.clipboard.writeText(t);el("copyStatus").textContent="コピーしました。ChatGPTにそのまま貼り付けられます。"}catch(e){el("convTranscriptList").select();document.execCommand("copy");el("copyStatus").textContent="コピーしました。"}};
-el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:conversation).slice(0,5);ci=0;convResults=[];drawConversation()};
+el("convRetry").onclick=()=>{let weak=[];convResults.forEach(r=>{if(r)r.targets.forEach((k,i)=>{if(!r.oks[i])weak.push(k)})});let w=[...new Set(weak)];let retry=conversation.filter(c=>c.targets.some(t=>w.includes(t)));convSession=(retry.length?retry:convSession).slice(0,5);ci=0;convResults=[];drawConversation()};
 
 stats();drawListen();drawSpeak();drawConversation();if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script></body></html>
